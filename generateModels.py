@@ -3,15 +3,16 @@ from pathlib import Path
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import GaussianNB, MultinomialNB
 from numpy import arange, split
 from collections import OrderedDict
 from matplotlib import pyplot
 
 def main():
-    models = OrderedDict([('Logisitic Regression', LogisticRegression()), ('Random Forest', RandomForestClassifier()), 
-                          ('Gaussian Naive Bayes', GaussianNB())])
+    models = OrderedDict([('Logisitic Regression', LogisticRegression()), ('Random Forest', RandomForestClassifier(n_jobs = -1)), 
+                          ('Gaussian Naive Bayes', GaussianNB()), ('Multinomial Naive Bayes', MultinomialNB())])
     modelAccuracies = OrderedDict()
+    modelXvals = None
     dataFile = Path('Data/Tweets.csv')
     data = read_csv(dataFile)
     vectorizer = CountVectorizer()
@@ -39,6 +40,15 @@ def main():
         pyplot.savefig('Model Results/{} Accuracy.png'.format(key))
         figCount += 1
         print('Finished {} analysis'.format(key))
+    figCount += 1
+    pyplot.figure(figCount)
+    pyplot.ylabel('Accuracy')
+    pyplot.xlabel('Train/Test Data Percentage Split')
+    pyplot.title('Comparative Accuracy of All Models')
+    for modelName, accuracy in modelAccuracies.items():
+        pyplot.plot(accuracy.keys(), accuracy.values(), label = modelName)
+    pyplot.legend()
+    pyplot.savefig('Model Results/Comparative Accuracy.png')
 
 if __name__ == '__main__':
     main()
