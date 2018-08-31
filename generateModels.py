@@ -3,14 +3,15 @@ from pathlib import Path
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.naive_bayes import GaussianNB, MultinomialNB
+from sklearn.naive_bayes import GaussianNB, MultinomialNB, BernoulliNB
 from numpy import arange, split
 from collections import OrderedDict
 from matplotlib import pyplot
 
 def main():
     models = OrderedDict([('Logisitic Regression', LogisticRegression()), ('Random Forest', RandomForestClassifier(n_jobs = -1)), 
-                          ('Gaussian Naive Bayes', GaussianNB()), ('Multinomial Naive Bayes', MultinomialNB())])
+                          ('Gaussian Naive Bayes', GaussianNB()), ('Multinomial Naive Bayes', MultinomialNB()),
+                          ('Bernoulli Naive Bayes', BernoulliNB())])
     modelAccuracies = OrderedDict()
     modelXvals = None
     dataFile = Path('Data/Tweets.csv')
