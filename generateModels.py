@@ -5,15 +5,18 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import GaussianNB, MultinomialNB, BernoulliNB
 from sklearn.calibration import CalibratedClassifierCV
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neural_network import MLPClassifier
 from numpy import arange, split
 from collections import OrderedDict 
 from matplotlib import pyplot
 from concurrent.futures import ThreadPoolExecutor
 
 def main():
-    models = OrderedDict([('Logisitic Regression', LogisticRegression()), ('Random Forest', RandomForestClassifier(n_jobs = -1)), 
+    models = OrderedDict([('Logisitic Regression', LogisticRegression()), ('Random Forest', RandomForestClassifier()), 
                           ('Gaussian Naive Bayes', GaussianNB()), ('Multinomial Naive Bayes', MultinomialNB()),
-                          ('Bernoulli Naive Bayes', BernoulliNB()), ('Probability Calibration', CalibratedClassifierCV())])
+                          ('Bernoulli Naive Bayes', BernoulliNB()), ('Probability Calibration', CalibratedClassifierCV()),
+                          ('Decision Tree', DecisionTreeClassifier()), ('Multi-Layer Perceptron', MLPClassifier())])
     modelAccuracies = OrderedDict()
     modelXvals = None
     dataFile = Path('Data/Tweets.csv')
@@ -22,7 +25,7 @@ def main():
     X = vectorizer.fit_transform(data.text.values).toarray()
     Y = data.airline_sentiment.values
     dataPcts = [(x * 100 * .1) / 100 for x in range(1, 10)]
-    with ThreadPoolExecutor(max_workers = len(models)) as executor:
+    with ThreadPoolExecutor() as executor:
         for key, model, count in zip(models.keys(), models.values(), range(len(models))):
             executor.submit(compute, X, Y, model, dataPcts, modelAccuracies, key, count)
     pyplot.figure(len(models) + 1)
@@ -36,6 +39,7 @@ def main():
 
 def compute(X, Y, model, dataPcts, modelAccuracies, key, figCount):
     accuracies = OrderedDict()
+    print('Started {} analysis'.format(key))
     for trainPct, testPct in zip(dataPcts, dataPcts[::-1]):
         trainVal = int(X.shape[0] * trainPct)
         testVal = int(X.shape[0] * testPct)
