@@ -2,12 +2,13 @@ from pandas import read_csv
 from pathlib import Path
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from numpy import arange, split
 from collections import OrderedDict
 from matplotlib import pyplot
 
 def main():
-    models = {'Logisitic Regression': LogisticRegression()}
+    models = {'Logisitic Regression': LogisticRegression(), 'Random Forest': RandomForestClassifier()}
     dataFile = Path('Data/Tweets.csv')
     data = read_csv(dataFile)
     vectorizer = CountVectorizer()
@@ -30,5 +31,7 @@ def main():
         pyplot.xlabel('Train/Test Data Percentage Split')
         pyplot.title('{} Accuracy'.format(key))
         pyplot.savefig('Model Results/{} Accuracy.png'.format(key))
+        print('Finished {} analysis'.format(key))
+
 if __name__ == '__main__':
     main()
