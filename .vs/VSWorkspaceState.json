@@ -1,7 +1,10 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\Data",
+    "\\Model Results",
+    "\\Model Results\\Avg Accuracy",
+    "\\Normalization"
   ],
-  "SelectedNode": "\\generateModels.py",
   "PreviewInSolutionExplorer": false
 }

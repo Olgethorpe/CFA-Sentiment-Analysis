@@ -1,63 +1,54 @@
-from pandas import read_csv
-from pathlib import Path
+from collections import OrderedDict
 from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.naive_bayes import GaussianNB, MultinomialNB, BernoulliNB
-from sklearn.calibration import CalibratedClassifierCV
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.neural_network import MLPClassifier
-from numpy import arange, split
-from collections import OrderedDict 
+from pathlib import Path
+from pandas import read_csv
 from matplotlib import pyplot
-from concurrent.futures import ThreadPoolExecutor
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
 
-def main():
-    models = OrderedDict([('Logisitic Regression', LogisticRegression()), ('Random Forest', RandomForestClassifier()), 
-                          ('Gaussian Naive Bayes', GaussianNB()), ('Multinomial Naive Bayes', MultinomialNB()),
-                          ('Bernoulli Naive Bayes', BernoulliNB()), ('Probability Calibration', CalibratedClassifierCV()),
-                          ('Decision Tree', DecisionTreeClassifier()), ('Multi-Layer Perceptron', MLPClassifier())])
-    modelAccuracies = OrderedDict()
-    modelXvals = None
-    dataFile = Path('Data/Tweets.csv')
-    data = read_csv(dataFile)
-    vectorizer = CountVectorizer()
-    X = vectorizer.fit_transform(data.text.values).toarray()
+vectorizers = OrderedDict([('Uni-gram', CountVectorizer())])# ('Bi-Gram', CountVectorizer(ngram_range = (1, 2)))])
+models = OrderedDict([('Logistic Regression', LogisticRegression()), ('Multinomial Naive Bayes', MultinomialNB())])
+                      #('Random Forest', RandomForestClassifier())])
+dataFile = Path('Data/Tweets.csv')
+data = read_csv(dataFile)
+figNum = 0
+iterations = 100
+for vectorizerKey, vectorizer in vectorizers.items():
+    X = vectorizer.fit_transform(data.text.values)
     Y = data.airline_sentiment.values
-    dataPcts = [(x * 100 * .1) / 100 for x in range(1, 10)]
-    with ThreadPoolExecutor() as executor:
-        for key, model, count in zip(models.keys(), models.values(), range(len(models))):
-            executor.submit(compute, X, Y, model, dataPcts, modelAccuracies, key, count)
-    pyplot.figure(len(models) + 1)
-    pyplot.ylabel('Accuracy')
-    pyplot.xlabel('Train/Test Data Percentage Split')
-    pyplot.title('Comparative Accuracy of All Models')
-    for modelName, accuracy in modelAccuracies.items():
-        pyplot.plot(accuracy.keys(), accuracy.values(), label = modelName)
-    pyplot.legend()
-    pyplot.savefig('Model Results/Comparative Accuracy.png')
-
-def compute(X, Y, model, dataPcts, modelAccuracies, key, figCount):
-    accuracies = OrderedDict()
-    print('Started {} analysis'.format(key))
-    for trainPct, testPct in zip(dataPcts, dataPcts[::-1]):
-        trainVal = int(X.shape[0] * trainPct)
-        testVal = int(X.shape[0] * testPct)
-        accKey = '{}/{}'.format(int(trainPct * 100), int(testPct * 100))
-        Xtrain = X[0:trainVal]
-        Ytrain = Y[0:trainVal]
-        Xtest = X[trainVal:]
-        Ytest = Y[trainVal:]
-        accuracies[accKey] = model.fit(Xtrain, Ytrain).score(Xtest, Ytest)
-    modelAccuracies[key] = accuracies
-    pyplot.figure(figCount)
-    pyplot.plot(accuracies.keys(), accuracies.values())
-    pyplot.ylabel('Accuracy')
-    pyplot.xlabel('Train/Test Data Percentage Split')
-    pyplot.title('{} Accuracy'.format(key))
-    pyplot.savefig('Model Results/{} Accuracy.png'.format(key))
-    figCount += 1
-    print('Finished {} analysis'.format(key))
-
-if __name__ == '__main__':
-    main()
+    for modelKey, model in models.items():
+        T0Acc = OrderedDict()
+        T1Acc= OrderedDict()
+        T2Acc = OrderedDict()
+        # Handles graphing and getting the models for the accuracy graphs
+        for trainSize in [(x * 100 * .1) / 100 for x in range(1, 10)]:
+            trainVal = int(trainSize * 100)
+            testVal = int(100 - trainVal)
+            testSize = round(1 - trainSize, 2)   
+            t0 = 0 
+            t1 = 0
+            t2 = 0
+            for iter in range(iterations):
+                X_0Train, X_0Test, Y_0Train, Y_0Test = train_test_split(X, Y, test_size = testSize)
+                X_1Test, X_2Test, Y_1Test, Y_2Test = train_test_split(X_0Test, Y_0Test, test_size = testSize)
+                model.fit(X_0Train, Y_0Train)
+                t0 += model.score(X_0Test, Y_0Test)
+                t1 += model.score(X_1Test, Y_1Test)
+                t2 += model.score(X_2Test, Y_2Test)
+                print('Iteration {} of {} for {} has completed for size {}/{}'.format(iter, iterations, modelKey, trainVal, testVal))
+            T0Acc['{}/{}'.format(trainVal, testVal)] = t0 / iterations
+            T1Acc['{}/{}'.format(trainVal, testVal)] = t1 / iterations
+            T2Acc['{}/{}'.format(trainVal, testVal)] = t2 / iterations
+        pyplot.figure(figNum)
+        pyplot.plot(T0Acc.keys(), T0Acc.values(), label = '{}'.format('T0 Avg Accuracy'))
+        pyplot.plot(T1Acc.keys(), T1Acc.values(), label = '{}'.format('T1 Avg Accuracy'))
+        pyplot.plot(T2Acc.keys(), T2Acc.values(), label = '{}'.format('T2 Avg Accuracy'))
+        pyplot.legend()
+        pyplot.ylabel('Accuracy')
+        pyplot.xlabel('Train/Test Data Percentage Split') 
+        pyplot.title('{} Accuracy'.format(modelKey))
+        pyplot.savefig('Model Results/Avg Accuracy/{} Accuracy.png'.format(modelKey))
+        print('Finished {} analysis for {}'.format(modelKey, vectorizerKey))
+        figNum += 1
