@@ -8,6 +8,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import FeatureUnion
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE
+from imblearn.pipeline import Pipeline
 import enum
 import numpy as np
 import pathlib
@@ -24,7 +25,7 @@ class Vectorizers(enum.Enum):
     V5 = CountVectorizer(ngram_range=(2, 2))
     V6 = CountVectorizer(ngram_range=(3, 3))
 
-CV = 10
+CV = 5
 C = [pow(10, x) for x in range(-4, 4)]
 alpha = np.linspace(0, 1, 11)[1:]
 kernel = ('linear', 'poly', 'rbf')
@@ -33,28 +34,63 @@ degree = list(range(1, 6))
 n_estimators = [x*200 for x in range(1, 11)]
 # Stores all the unfitted models
 class Models(enum.Enum):
-    M1 = GridSearchCV(LogisticRegression(), {
-        'C': C
-    }, cv=CV, return_train_score=True, verbose=3, n_jobs=-1)
-    M2 = GridSearchCV(MultinomialNB(), {
-        'alpha': alpha
-    }, cv=CV, return_train_score=True, n_jobs=-1, verbose=3)
-    M3 = GridSearchCV(RandomForestClassifier(), {
-        'n_estimators': n_estimators,
-        'max_depth': [200]
-    }, cv=CV, return_train_score=True, verbose=3, n_jobs=2)
-    M4 = GridSearchCV(SVC(), {
-        'C': C,
-        'kernel': kernel,
-        'gamma': gamma,
-        'degree': degree
-    },cv=CV, return_train_score=True, n_jobs=-1, verbose=3)
-    M5 = GridSearchCV(Perceptron(max_iter=1000), {
-        'alpha': alpha
-    }, cv=CV, return_train_score=True, n_jobs=-1, verbose=3)
-    M6 = GridSearchCV(KNeighborsClassifier(), {
-    	'n_neighbors': [1, 5, 11, 21, 41, 61, 81, 101, 201, 401]
-    }, cv=CV, return_train_score=True, n_jobs=2, verbose=3)
+    M1 = GridSearchCV(
+        estimator=Pipeline([
+            ('sampling', SMOTE()),
+            ('classification', LogisticRegression())
+        ]), 
+        param_grid={
+            'classification__C': C
+        }, 
+        cv=CV, return_train_score=True, verbose=3, n_jobs=-1)
+    M2 = GridSearchCV(
+        estimator=Pipeline([
+            ('sampling', SMOTE()),
+            ('classification', MultinomialNB())
+        ]), 
+        param_grid={
+            'classification__alpha': alpha
+        }, 
+        cv=CV, return_train_score=True, n_jobs=-1, verbose=3)
+    M3 = GridSearchCV(
+        estimator=Pipeline([
+            ('sampling', SMOTE()),
+            ('classification', RandomForestClassifier(max_depth=200))
+        ]),
+        param_grid={
+            'classification__n_estimators': n_estimators,
+        }, 
+        cv=CV, return_train_score=True, verbose=3, n_jobs=2)
+    M4 = GridSearchCV(
+        estimator=Pipeline([
+            ('sampling', SMOTE()),
+            ('classification', SVC())
+        ]), 
+        param_grid={
+            'classification__C': C,
+            'classification__kernel': kernel,
+            'classification__gamma': gamma,
+            'classification__degree': degree
+        },
+        cv=CV, return_train_score=True, n_jobs=-1, verbose=3)
+    M5 = GridSearchCV(
+        estimator=Pipeline([
+            ('sampling', SMOTE()),
+            ('classification', Perceptron(max_iter=1000))
+        ]),
+        param_grid={
+            'classification__alpha': alpha
+        }, 
+        cv=CV, return_train_score=True, n_jobs=-1, verbose=3)
+    M6 = GridSearchCV(
+        estimator=Pipeline([
+            ('sampling', SMOTE()),
+            ('classification', KNeighborsClassifier())
+        ]), 
+        param_grid={
+    	    'classification__n_neighbors': [1, 5, 11, 21, 41, 61, 81, 101, 201, 401]
+        }, 
+        cv=CV, return_train_score=True, n_jobs=2, verbose=3)
 
 class CFAUtils:
     """Utility functions to help with CFA analysis"""
@@ -143,7 +179,6 @@ def main():
     dataCombinations = list(dataCombinations[0:7]) + list(dataCombinations[18:19])
     initFolderStructure()
     createData(dataCombinations)
-    SMOTEData(dataCombinations)
     trainModels(dataCombinations)
 
 def initFolderStructure():
@@ -173,25 +208,6 @@ def createData(dataCombinations):
     for comb in dataCombinations:
         data.fit_transform(comb, 'Data/Data_Feature_Combinations')
 
-def SMOTEData(dataCombinations):
-    """Use SMOTE technique to impute data"""
-    smoteFolder = pathlib.Path('Data/SMOTE_Data')
-    testFolder = pathlib.Path('Data/Test_Data')
-    for comb in dataCombinations:
-        names = '+'.join([v.name for v in comb])
-        smoteFile = smoteFolder.joinpath('{}.npz'.format(names))
-        testFile1 = testFolder.joinpath('Test1/{}.npz'.format(names))
-        testFile2 = testFolder.joinpath('Test2/{}.npz'.format(names))
-        if not smoteFile.exists():
-            data = np.load(pathlib.Path('Data/Data_Feature_Combinations').resolve().joinpath('{}.npz'.format(names)))
-            trainx, testx0, trainy, testy0 = train_test_split(data['X'].ravel()[0], data['Y'], test_size=0.2, random_state=1)
-            testx1, testx2 , testy1, testy2 = train_test_split(testx0, testy0, test_size=0.5, random_state=1)
-            sm = SMOTE(random_state=1, n_jobs=-1)
-            trainx, trainy = sm.fit_resample(trainx, trainy)
-            np.savez(smoteFile, X=trainx, Y=trainy)
-            np.savez(testFile1, X=testx1, Y=testy1)
-            np.savez(testFile2, X=testx2, Y=testy2)
-
 def trainModels(dataCombinations, resultFolder=None):
     """Train all models for each combination"""
     modelFolder = pathlib.Path('Models').resolve()
@@ -210,17 +226,17 @@ def trainModels(dataCombinations, resultFolder=None):
                 model.value.fit(data['X'].ravel()[0], data['Y'])
                 data = pd.DataFrame.from_dict(model.value.cv_results_)
                 if model == Models.M1:
-                    data = data[['param_C', 'mean_train_score', 'mean_test_score', 'mean_fit_time']]
+                    data = data[['param_classification__C', 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
                 elif model == Models.M2 or model == Models.M5:
-                    data = data[['param_alpha', 'mean_train_score', 'mean_test_score', 'mean_fit_time']]
+                    data = data[['param_classification__alpha', 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
                 elif model == Models.M3:
-                    data = data[['param_n_estimators', 'param_max_depth', 'mean_train_score', 'mean_test_score', 'mean_fit_time']]
+                    data = data[['param_classification__n_estimators', 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
                 elif model == model.M4:
-                    data = data[['param_C', 'param_kernel', 'param_gamma', 'param_degree', 'mean_train_score', 'mean_test_score', 'mean_fit_time']]
+                    data = data[['param_classification__C', 'param_classification__kernel', 'param_classification__gamma', 'param_classification__degree', 
+                                 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
                 elif model == model.M6:
-                    data = data[['param_n_neighbors', 'mean_train_score', 'mean_test_score', 'mean_fit_time']]
-		
+                    data = data[['param_classification__n_neighbors', 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
                 data.to_csv(modelFile)
-		
+
 if __name__ == '__main__':
     main()

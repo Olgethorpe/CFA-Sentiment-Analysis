@@ -1,10 +1,8 @@
 {
   "ExpandedNodes": [
     "",
-    "\\Data",
-    "\\Model Results",
-    "\\Model Results\\Avg Accuracy",
-    "\\Normalization"
+    "\\__pycache__"
   ],
+  "SelectedNode": "\\CFA-Sentiment-Analysis.pyproj",
   "PreviewInSolutionExplorer": false
 }

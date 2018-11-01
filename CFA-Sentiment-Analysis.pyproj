@@ -1,0 +1,73 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{16c72f36-892f-4e17-8f6b-18af87a3ea14}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile>main.py</StartupFile>
+    <SearchPath />
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId>CondaEnv|CondaEnv|CFA_Project</InterpreterId>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="main.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="CondaEnv|CondaEnv|CFA_Project" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Data\Data_Feature_Combinations\" />
+    <Folder Include="Data\Raw\" />
+    <Folder Include="Data\SMOTE_Data\" />
+    <Folder Include="Data\Test_Data\" />
+    <Folder Include="Data\Test_Data\Test1\" />
+    <Folder Include="Data\Test_Data\Test2\" />
+    <Folder Include="Models\" />
+    <Folder Include="Data\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Data\Data_Feature_Combinations\V1+V2.npz" />
+    <Content Include="Data\Data_Feature_Combinations\V1.npz" />
+    <Content Include="Data\Data_Feature_Combinations\V2.npz" />
+    <Content Include="Data\Data_Feature_Combinations\V3.npz" />
+    <Content Include="Data\Data_Feature_Combinations\V4+V5.npz" />
+    <Content Include="Data\Data_Feature_Combinations\V4.npz" />
+    <Content Include="Data\Data_Feature_Combinations\V5.npz" />
+    <Content Include="Data\Data_Feature_Combinations\V6.npz" />
+    <Content Include="Data\Raw\Tweets.csv" />
+    <Content Include="Data\SMOTE_Data\V1+V2.npz" />
+    <Content Include="Data\SMOTE_Data\V1.npz" />
+    <Content Include="Data\SMOTE_Data\V2.npz" />
+    <Content Include="Data\SMOTE_Data\V3.npz" />
+    <Content Include="Data\SMOTE_Data\V4+V5.npz" />
+    <Content Include="Data\SMOTE_Data\V4.npz" />
+    <Content Include="Data\SMOTE_Data\V5.npz" />
+    <Content Include="Data\SMOTE_Data\V6.npz" />
+    <Content Include="Data\Test_Data\Test1\V1+V2.npz" />
+    <Content Include="Data\Test_Data\Test1\V1.npz" />
+    <Content Include="Data\Test_Data\Test1\V2.npz" />
+    <Content Include="Data\Test_Data\Test1\V3.npz" />
+    <Content Include="Data\Test_Data\Test1\V4+V5.npz" />
+    <Content Include="Data\Test_Data\Test1\V4.npz" />
+    <Content Include="Data\Test_Data\Test1\V5.npz" />
+    <Content Include="Data\Test_Data\Test1\V6.npz" />
+    <Content Include="Data\Test_Data\Test2\V1+V2.npz" />
+    <Content Include="Data\Test_Data\Test2\V1.npz" />
+    <Content Include="Data\Test_Data\Test2\V2.npz" />
+    <Content Include="Data\Test_Data\Test2\V3.npz" />
+    <Content Include="Data\Test_Data\Test2\V4+V5.npz" />
+    <Content Include="Data\Test_Data\Test2\V4.npz" />
+    <Content Include="Data\Test_Data\Test2\V5.npz" />
+    <Content Include="Data\Test_Data\Test2\V6.npz" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+</Project>

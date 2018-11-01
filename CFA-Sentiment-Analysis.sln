@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2048
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "CFA-Sentiment-Analysis", "CFA-Sentiment-Analysis.pyproj", "{16C72F36-892F-4E17-8F6B-18AF87A3EA14}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{16C72F36-892F-4E17-8F6B-18AF87A3EA14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{16C72F36-892F-4E17-8F6B-18AF87A3EA14}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {27A94235-3540-48D8-BB56-9148C5D4996F}
+	EndGlobalSection
+EndGlobal
