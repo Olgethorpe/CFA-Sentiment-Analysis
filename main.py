@@ -221,7 +221,7 @@ def trainModels(dataCombinations, resultFolder=None):
         for model in Models:
             modelFile = folder.joinpath('{}.csv'.format(model.name))
             if not modelFile.exists():
-                data = pathlib.Path('Data/SMOTE_Data/{}.npz'.format(names)).resolve()
+                data = pathlib.Path('Data/Data_Feature_Combinations/{}.npz'.format(names)).resolve()
                 data = np.load(data)
                 model.value.fit(data['X'].ravel()[0], data['Y'])
                 data = pd.DataFrame.from_dict(model.value.cv_results_)

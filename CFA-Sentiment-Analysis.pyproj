@@ -27,7 +27,6 @@
   <ItemGroup>
     <Folder Include="Data\Data_Feature_Combinations\" />
     <Folder Include="Data\Raw\" />
-    <Folder Include="Data\SMOTE_Data\" />
     <Folder Include="Data\Test_Data\" />
     <Folder Include="Data\Test_Data\Test1\" />
     <Folder Include="Data\Test_Data\Test2\" />
@@ -44,14 +43,6 @@
     <Content Include="Data\Data_Feature_Combinations\V5.npz" />
     <Content Include="Data\Data_Feature_Combinations\V6.npz" />
     <Content Include="Data\Raw\Tweets.csv" />
-    <Content Include="Data\SMOTE_Data\V1+V2.npz" />
-    <Content Include="Data\SMOTE_Data\V1.npz" />
-    <Content Include="Data\SMOTE_Data\V2.npz" />
-    <Content Include="Data\SMOTE_Data\V3.npz" />
-    <Content Include="Data\SMOTE_Data\V4+V5.npz" />
-    <Content Include="Data\SMOTE_Data\V4.npz" />
-    <Content Include="Data\SMOTE_Data\V5.npz" />
-    <Content Include="Data\SMOTE_Data\V6.npz" />
     <Content Include="Data\Test_Data\Test1\V1+V2.npz" />
     <Content Include="Data\Test_Data\Test1\V1.npz" />
     <Content Include="Data\Test_Data\Test1\V2.npz" />
