@@ -15,6 +15,7 @@ import pathlib
 import pandas as pd
 import itertools
 import os
+import joblib
 
 class Vectorizers(enum.Enum):
     """Store the vectorizers"""
@@ -25,6 +26,7 @@ class Vectorizers(enum.Enum):
     V5 = CountVectorizer(ngram_range=(2, 2))
     V6 = CountVectorizer(ngram_range=(3, 3))
 
+# Parameters to pass to models
 CV = 5
 C = [pow(10, x) for x in range(-4, 4)]
 alpha = np.linspace(0, 1, 11)[1:]
@@ -32,8 +34,9 @@ kernel = ('linear', 'poly', 'rbf')
 gamma = [pow(10, x) for x in range(-3, 3)]
 degree = list(range(1, 6))
 n_estimators = [x*200 for x in range(1, 11)]
-# Stores all the unfitted models
+
 class Models(enum.Enum):
+    """Stores the unfitted models"""
     M1 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
@@ -82,15 +85,6 @@ class Models(enum.Enum):
             'classification__alpha': alpha
         },
         cv=CV, return_train_score=True, n_jobs=-1, verbose=3)
-    M6 = GridSearchCV(
-        estimator=Pipeline([
-            ('sampling', SMOTE()),
-            ('classification', KNeighborsClassifier())
-        ]),
-        param_grid={
-    	    'classification__n_neighbors': [1, 5, 11, 21, 41, 61, 81, 101, 201, 401]
-        },
-        cv=CV, return_train_score=True, n_jobs=2, verbose=3)
 
 class CFAUtils:
     """Utility functions to help with CFA analysis"""
@@ -199,24 +193,58 @@ class CFA:
 def main():
     """Main definition of the program"""
     util = CFAUtils()
-    dataCombinations = util.powerset(Vectorizers)
-    dataCombinations = list(dataCombinations[0:7]) + list(dataCombinations[18:19])
-    createData(dataCombinations)
-    #trainModels(dataCombinations)
+    data_combs = util.powerset(Vectorizers)
+    data_combs = list(data_combs[0:7]) + list(data_combs[18:19])
+    create_data(data_combs)
+    #trainModels(data_combs) # Only for use when tuning
+    train_tuned_models()
 
-def createData(dataCombinations):
+def create_data(data_combs):
     """Create the data combinations"""
     data_file = pathlib.Path('data/raw/tweets.csv').resolve()
     data = Text(data_file)
-    for comb in dataCombinations:
+    for comb in data_combs:
         data.fit_transform(comb, 'data/train')
 
-def trainModels(dataCombinations, resultFolder=None):
+# TODO: fix when we have a ton of models
+def train_tuned_models():
+    """Train the models using the selected tuning parameters"""
+    tuned_folder = pathlib.Path('models').resolve().joinpath('tuned')
+    tuning_params = pd.read_csv(pathlib.Path('models').resolve().joinpath('tuning_params.csv'), index_col=0)
+    if not tuned_folder.exists():
+        os.makedirs(tuned_folder)
+    tuning_params.apply(train, args=(tuned_folder,), axis=1)
+
+def train(x, tuned_folder):
+    """Train a model with some tuning parameters"""
+    vectorizer_folder = tuned_folder.joinpath(x.name)
+    data_file = np.load(pathlib.Path('data').resolve().joinpath('train', '{}.npz'.format(x.name)))
+    if not vectorizer_folder.exists():
+        os.makedirs(vectorizer_folder)
+    for col_val, col in zip(x, x.index):
+        if col == 'M1':
+            m = LogisticRegression(C=col_val, solver='liblinear', multi_class='auto', verbose=3, n_jobs=-1, random_state=1)
+        elif col == 'M2':
+            m = MultinomialNB(alpha=col_val)
+        elif col == 'M3':
+            m = RandomForestClassifier(n_estimators=col_val, verbose=3, n_jobs=-1)
+        elif col == 'M4':
+            params = col_val.split(',')
+            m = SVC(C=float(params[0]), kernel=params[1], gamma=float(params[2]), degree=float(params[3]), verbose=3)
+        elif col == 'M5':
+            m = Perceptron(alpha=col_val, max_iter=1000, verbose=3, n_jobs=-1)
+        model_file = vectorizer_folder.joinpath('{}.joblib'.format(col))
+        if not model_file.exists():
+            m.fit(data_file['X'].ravel()[0], data_file['Y'])
+            joblib.dump(m, model_file)
+
+# TODO: fix when revisiting project to follow new folder structure
+def trainModels(data_combs, resultFolder=None):
     """Train all models for each combination"""
-    modelFolder = pathlib.Path('Models').resolve()
+    modelFolder = pathlib.Path('models').resolve()
     if resultFolder is not None:
         modelFolder.joinpath(resultFolder)
-    for comb in dataCombinations[0:6]:
+    for comb in data_combs[0:6]:
         names = '+'.join([v.name for v in comb])
         folder = modelFolder.joinpath(names)
         if not folder.exists():
@@ -224,7 +252,7 @@ def trainModels(dataCombinations, resultFolder=None):
         for model in Models:
             modelFile = folder.joinpath('{}.csv'.format(model.name))
             if not modelFile.exists():
-                data = pathlib.Path('Data/Data_Feature_Combinations/{}.npz'.format(names)).resolve()
+                data = pathlib.Path('data/train/{}.npz'.format(names)).resolve()
                 data = np.load(data)
                 model.value.fit(data['X'].ravel()[0], data['Y'])
                 data = pd.DataFrame.from_dict(model.value.cv_results_)
