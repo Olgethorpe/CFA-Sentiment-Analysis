@@ -38,19 +38,19 @@ class Models(enum.Enum):
         estimator=Pipeline([
             ('sampling', SMOTE()),
             ('classification', LogisticRegression())
-        ]), 
+        ]),
         param_grid={
             'classification__C': C
-        }, 
+        },
         cv=CV, return_train_score=True, verbose=3, n_jobs=-1)
     M2 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
             ('classification', MultinomialNB())
-        ]), 
+        ]),
         param_grid={
             'classification__alpha': alpha
-        }, 
+        },
         cv=CV, return_train_score=True, n_jobs=-1, verbose=3)
     M3 = GridSearchCV(
         estimator=Pipeline([
@@ -59,13 +59,13 @@ class Models(enum.Enum):
         ]),
         param_grid={
             'classification__n_estimators': n_estimators,
-        }, 
+        },
         cv=CV, return_train_score=True, verbose=3, n_jobs=2)
     M4 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
             ('classification', SVC())
-        ]), 
+        ]),
         param_grid={
             'classification__C': C,
             'classification__kernel': kernel,
@@ -80,16 +80,16 @@ class Models(enum.Enum):
         ]),
         param_grid={
             'classification__alpha': alpha
-        }, 
+        },
         cv=CV, return_train_score=True, n_jobs=-1, verbose=3)
     M6 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
             ('classification', KNeighborsClassifier())
-        ]), 
+        ]),
         param_grid={
     	    'classification__n_neighbors': [1, 5, 11, 21, 41, 61, 81, 101, 201, 401]
-        }, 
+        },
         cv=CV, return_train_score=True, n_jobs=2, verbose=3)
 
 class CFAUtils:
@@ -130,30 +130,48 @@ class Text(Data):
     """Text object to manipulate text data"""
     def fit_transform(self, vectorizers, folder):
         """Convert text features to numbers"""
-        self.features_folder = folder
+        self.train_features_folder = folder
+        self.test_features_folder = folder
         self.vectorizer_names = vectorizers
-        if not self.features_file.exists():
+        if not self.train_features_file.exists():
             self.vectorizers = vectorizers
             self.transformed = self.vectorizers.fit_transform(self.raw.X)
-            np.savez(self.features_file, X = self.transformed, Y = self.raw.Y)
-        else:
-            self.transformed = np.load(self.features_file)
+            x_train, x_test, y_train, y_test = train_test_split(self.transformed, self.raw.Y, test_size=.5, random_state=1)
+            np.savez(self.train_features_file, X=x_train, Y=y_train)
+            if not self.test_features_file.exists():
+                np.savez(self.test_features_file, X=x_test, Y=y_test)
 
     @property
-    def features_folder(self):
-        """Return the location of the data feature combinations"""
+    def train_features_folder(self):
+        """Return the location of the training data feature combinations"""
         return self._features_folder
 
-    @features_folder.setter
-    def features_folder(self, val):
+    @train_features_folder.setter
+    def train_features_folder(self, val):
         self._features_folder = pathlib.Path(val).resolve()
         if not self._features_folder.exists():
             os.makedirs(self._features_folder)
 
     @property
-    def features_file(self):
+    def test_features_folder(self):
+        """Return the location of the testing data feature combinations"""
+        return self._test_folder
+
+    @test_features_folder.setter
+    def test_features_folder(self, val):
+        self._test_folder = self._features_folder.parents[0].joinpath('test')
+        if not self._test_folder.exists():
+            os.makedirs(self._test_folder)
+
+    @property
+    def train_features_file(self):
         """Return the location of the data feature file"""
-        return self.features_folder.joinpath('{}{}'.format('+'.join(self.vectorizer_names), '.npz'))
+        return self.train_features_folder.joinpath('{}{}'.format(self.vectorizer_names, '.npz'))
+
+    @property
+    def test_features_file(self):
+        """Return the location of the data feature file"""
+        return self.test_features_folder.joinpath('{}{}'.format(self.vectorizer_names, '.npz'))
 
     @property
     def vectorizer_names(self):
@@ -162,51 +180,36 @@ class Text(Data):
 
     @vectorizer_names.setter
     def vectorizer_names(self, vectorizers):
-        self._vectorizer_names = [vectorizer.name for vectorizer in vectorizers]
+        self._vectorizer_names = '+'.join([vectorizer.name for vectorizer in vectorizers])
 
     @property
     def vectorizers(self):
         """Return the vectorizers"""
-        return self.__vectorizers
+        return self._vectorizers
 
     @vectorizers.setter
     def vectorizers(self, vectorizers):
-        self.__vectorizers = FeatureUnion([(feature.name, feature.value) for feature in vectorizers])
+        self._vectorizers = FeatureUnion([(feature.name, feature.value) for feature in vectorizers])
+
+class CFA:
+    """Combinatorial Fusion Analysis object"""
+    def __init__(self, **kwargs):
+        """Initialize the CFA object"""
 
 def main():
+    """Main definition of the program"""
     util = CFAUtils()
     dataCombinations = util.powerset(Vectorizers)
     dataCombinations = list(dataCombinations[0:7]) + list(dataCombinations[18:19])
-    initFolderStructure()
     createData(dataCombinations)
-    trainModels(dataCombinations)
-
-def initFolderStructure():
-    """Initialize the folder structure"""
-    data_folder = pathlib.Path('Data').resolve()
-    raw_data_folder = pathlib.Path('Data/Raw').resolve()
-    model_folder = pathlib.Path('Models').resolve()
-    smote_folder = pathlib.Path('Data/SMOTE_Data').resolve()
-    test_folder = pathlib.Path('Data/Test_Data').resolve()
-    if not data_folder.exists():
-        os.makedirs(data_folder)
-    if not raw_data_folder.exists():
-        os.makedirs(raw_data_folder)
-    if not model_folder.exists():
-        os.makedirs(model_folder)
-    if not smote_folder.exists():
-        os.makedirs(smote_folder)
-    if not test_folder.exists():
-        os.makedirs(test_folder)
-        os.makedirs(test_folder.joinpath('Test1'))
-        os.makedirs(test_folder.joinpath('Test2'))
+    #trainModels(dataCombinations)
 
 def createData(dataCombinations):
     """Create the data combinations"""
-    data_file = pathlib.Path('Data/Raw/Tweets.csv').resolve()
+    data_file = pathlib.Path('data/raw/tweets.csv').resolve()
     data = Text(data_file)
     for comb in dataCombinations:
-        data.fit_transform(comb, 'Data/Data_Feature_Combinations')
+        data.fit_transform(comb, 'data/train')
 
 def trainModels(dataCombinations, resultFolder=None):
     """Train all models for each combination"""
@@ -232,7 +235,7 @@ def trainModels(dataCombinations, resultFolder=None):
                 elif model == Models.M3:
                     data = data[['param_classification__n_estimators', 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
                 elif model == model.M4:
-                    data = data[['param_classification__C', 'param_classification__kernel', 'param_classification__gamma', 'param_classification__degree', 
+                    data = data[['param_classification__C', 'param_classification__kernel', 'param_classification__gamma', 'param_classification__degree',
                                  'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
                 elif model == model.M6:
                     data = data[['param_classification__n_neighbors', 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
