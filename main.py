@@ -196,7 +196,7 @@ def main():
     """Main definition of the program"""
     util = CFAUtils()
     data_combs = util.powerset(Vectorizers)
-    #data_combs = list(data_combs[0:7]) + list(data_combs[18:19])
+    data_combs = list(data_combs[0:7]) + list(data_combs[18:19])
     create_data(data_combs)
     create_correlation_dist(data_combs)
     #trainModels(data_combs) # Only for use when tuning
@@ -213,7 +213,11 @@ def create_data(data_combs):
 # chi^2
 # pearson correlation
 def create_correlation_dist(data_combs):
-    """Create correlation distributions of the training data"""
+    """Create correlation distributions oolve().joinpath('train')
+    for comb in data_combs:
+        data_file = np.load(data_folder.joinpath('{}.npz'.format('+'.join([x.name for x in comb]))))
+        data = pd.DataFrame(data_file['X'].ravel()[0].toarray())
+        #data['Y'] = data_file['Y']f the training data"""
     data_folder = pathlib.Path('data').resolve().joinpath('train')
     for comb in data_combs:
         data_file = np.load(data_folder.joinpath('{}.npz'.format('+'.join([x.name for x in comb]))))
