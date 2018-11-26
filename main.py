@@ -219,8 +219,7 @@ def create_correlation_dist(data_combs):
         data_file = np.load(data_folder.joinpath('{}.npz'.format('+'.join([x.name for x in comb]))))
         data = pd.DataFrame(data_file['X'].ravel()[0].toarray())
         #data['Y'] = data_file['Y']
-        print(data)
-
+        print('+'.join([x.name for x in comb]))
 # TODO: fix when we have a ton of models
 def train_tuned_models():
     """Train the models using the selected tuning parameters"""
