@@ -16,6 +16,8 @@ import pandas as pd
 import itertools
 import os
 import joblib
+import plotly.plotly as py
+import plotly.figure_factory as ff
 
 class Vectorizers(enum.Enum):
     """Store the vectorizers"""
@@ -183,7 +185,7 @@ class Text(Data):
 
     @vectorizers.setter
     def vectorizers(self, vectorizers):
-        self._vectorizers = FeatureUnion([(feature.name, feature.value) for feature in vectorizers])
+        self._vectorizers = FeatureUnion([(feature.name, feature.value) for feature in vectorizers], n_jobs=-1)
 
 class CFA:
     """Combinatorial Fusion Analysis object"""
@@ -194,10 +196,11 @@ def main():
     """Main definition of the program"""
     util = CFAUtils()
     data_combs = util.powerset(Vectorizers)
-    data_combs = list(data_combs[0:7]) + list(data_combs[18:19])
+    #data_combs = list(data_combs[0:7]) + list(data_combs[18:19])
     create_data(data_combs)
+    create_correlation_dist(data_combs)
     #trainModels(data_combs) # Only for use when tuning
-    train_tuned_models()
+    #train_tuned_models()
 
 def create_data(data_combs):
     """Create the data combinations"""
@@ -205,6 +208,18 @@ def create_data(data_combs):
     data = Text(data_file)
     for comb in data_combs:
         data.fit_transform(comb, 'data/train')
+
+# mutual info
+# chi^2
+# pearson correlation
+def create_correlation_dist(data_combs):
+    """Create correlation distributions of the training data"""
+    data_folder = pathlib.Path('data').resolve().joinpath('train')
+    for comb in data_combs:
+        data_file = np.load(data_folder.joinpath('{}.npz'.format('+'.join([x.name for x in comb]))))
+        data = pd.DataFrame(data_file['X'].ravel()[0].toarray())
+        #data['Y'] = data_file['Y']
+        print(data)
 
 # TODO: fix when we have a ton of models
 def train_tuned_models():
@@ -227,23 +242,21 @@ def train(x, tuned_folder):
         elif col == 'M2':
             m = MultinomialNB(alpha=col_val)
         elif col == 'M3':
-            m = RandomForestClassifier(n_estimators=col_val, verbose=3, n_jobs=-1)
+            m = RandomForestClassifier(n_estimators=col_val, verbose=3, n_jobs=-1, random_state=1)
         elif col == 'M4':
             params = col_val.split(',')
-            m = SVC(C=float(params[0]), kernel=params[1], gamma=float(params[2]), degree=float(params[3]), verbose=3)
+            m = SVC(C=float(params[0]), kernel=params[1], gamma=float(params[2]), degree=float(params[3]), verbose=3, random_state=1)
         elif col == 'M5':
-            m = Perceptron(alpha=col_val, max_iter=1000, verbose=3, n_jobs=-1)
+            m = Perceptron(alpha=col_val, max_iter=1000, verbose=3, n_jobs=-1, random_state=1)
         model_file = vectorizer_folder.joinpath('{}.joblib'.format(col))
         if not model_file.exists():
             m.fit(data_file['X'].ravel()[0], data_file['Y'])
             joblib.dump(m, model_file)
 
 # TODO: fix when revisiting project to follow new folder structure
-def trainModels(data_combs, resultFolder=None):
+def trainModels(data_combs):
     """Train all models for each combination"""
-    modelFolder = pathlib.Path('models').resolve()
-    if resultFolder is not None:
-        modelFolder.joinpath(resultFolder)
+    modelFolder = pathlib.Path('models').resolve().joinpath('')
     for comb in data_combs[0:6]:
         names = '+'.join([v.name for v in comb])
         folder = modelFolder.joinpath(names)
@@ -258,16 +271,16 @@ def trainModels(data_combs, resultFolder=None):
                 data = pd.DataFrame.from_dict(model.value.cv_results_)
                 if model == Models.M1:
                     data = data[['param_classification__C', 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
-                elif model == Models.M2 or model == Models.M5:
-                    data = data[['param_classification__alpha', 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
-                elif model == Models.M3:
-                    data = data[['param_classification__n_estimators', 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
-                elif model == model.M4:
-                    data = data[['param_classification__C', 'param_classification__kernel', 'param_classification__gamma', 'param_classification__degree',
-                                 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
-                elif model == model.M6:
-                    data = data[['param_classification__n_neighbors', 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
-                data.to_csv(modelFile)
+                    data.to_csv(modelFile)
+                #elif model == Models.M2 or model == Models.M5:
+                #    data = data[['param_classification__alpha', 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
+                #elif model == Models.M3:
+                #    data = data[['param_classification__n_estimators', 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
+                #elif model == model.M4:
+                #    data = data[['param_classification__C', 'param_classification__kernel', 'param_classification__gamma', 'param_classification__degree',
+                #                 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
+                #elif model == model.M6:
+                #    data = data[['param_classification__n_neighbors', 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
 
 if __name__ == '__main__':
     main()
