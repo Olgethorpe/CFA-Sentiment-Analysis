@@ -1,7 +1,9 @@
 # Datasets
 data/test
 data/train
+data/filter
 models/tuned
+reports/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
