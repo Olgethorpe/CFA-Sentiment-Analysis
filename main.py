@@ -1,4 +1,5 @@
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.feature_selection import chi2, mutual_info_classif
 from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression, Perceptron
 from sklearn.naive_bayes import MultinomialNB
@@ -135,7 +136,7 @@ class Text(Data):
         if not self.train_features_file.exists():
             self.vectorizers = vectorizers
             self.transformed = self.vectorizers.fit_transform(self.raw.X)
-            x_train, x_test, y_train, y_test = train_test_split(self.transformed, self.raw.Y, test_size=.5, random_state=1)
+            x_train, x_test, y_train, y_test = train_test_split(self.transformed, self.raw.Y, test_size=.2, random_state=1)
             np.savez(self.train_features_file, X=x_train, Y=y_train)
             if not self.test_features_file.exists():
                 np.savez(self.test_features_file, X=x_test, Y=y_test)
@@ -200,17 +201,24 @@ def main():
     util = CFAUtils()
     data_combs = util.powerset(Vectorizers)
     data_combs = list(data_combs[0:7]) + list(data_combs[18:19]) # Remove for all combinations
-    subplots = tools.make_subplots(rows=2, cols=len(data_combs), subplot_titles=get_plot_titles(data_combs))
+    subplots = tools.make_subplots(rows=7, cols=len(data_combs), subplot_titles=get_plot_titles(data_combs))
     create_data(data_combs)
     create_correlation_dist(data_combs, subplots)
+    create_chi_dist(data_combs, subplots)
+    create_mutual_info_dist(data_combs, subplots)
     #trainModels(data_combs) # Only for use when tuning
     #train_tuned_models()
     save_subplots(subplots)
 
 def get_plot_titles(data_combs):
     """Create the plot titles for subplots"""
-    titles = create_row_titles(data_combs, 'Correlation Distribution (NaN = 0)')
-    titles.extend(create_row_titles(data_combs, 'Correlation Distribution (Dropped NaN)'))
+    titles = create_row_titles(data_combs, 'Pearson Correlation Distribution (NaN = 0)')
+    titles.extend(create_row_titles(data_combs, 'Pearson Correlation Distribution (Dropped NaN)'))
+    titles.extend(create_row_titles(data_combs, 'Pearson Absolute Value Correlation Distribution (NaN = 0)'))
+    titles.extend(create_row_titles(data_combs, 'Pearson Absolute Value Correlation Distribution (Dropped NaN)'))
+    titles.extend(create_row_titles(data_combs, 'Chi^2 Distribution (NaN = 0)'))
+    titles.extend(create_row_titles(data_combs, 'Chi^2 Distribution (Dropped NaN)'))
+    titles.extend(create_row_titles(data_combs, 'Mutual information Score'))
     return titles
 
 def create_row_titles(data_combs, msg):
@@ -223,22 +231,24 @@ def create_row_titles(data_combs, msg):
 
 def create_data(data_combs):
     """Create the data combinations"""
+    print('Creating training and testing sets.')
     data_file = pathlib.Path('data/raw/tweets.csv').resolve()
     data = Text(data_file)
     for comb in data_combs:
         data.fit_transform(comb, 'data/train')
+    print('Done.')
 
-# mutual info
-# chi^2
-# pearson correlation
 def create_correlation_dist(data_combs, subplots):
     """Create correlation distributions of the training data"""
+    print('Creating correlation distributions')
     data_folder = pathlib.Path('data').resolve()
     train_folder = data_folder.joinpath('train')
     filter_folder = data_folder.joinpath('filter')
     corr_folder = filter_folder.joinpath('correlations')
     nan_folder = corr_folder.joinpath('with_nan')
+    abs_nan_folder = corr_folder.joinpath('abs_with_nan')
     no_nan_folder = corr_folder.joinpath('no_nan')
+    abs_no_nan_folder = corr_folder.joinpath('abs_with_no_nan')
     raw_folder = corr_folder.joinpath('raw')
     html_report = pathlib.Path('reports').resolve().joinpath('graphs.html')
     if not nan_folder.exists():
@@ -247,19 +257,22 @@ def create_correlation_dist(data_combs, subplots):
         os.makedirs(no_nan_folder)
     if not raw_folder.exists():
         os.makedirs(raw_folder)
+    if not abs_nan_folder.exists():
+        os.makedirs(abs_nan_folder)
+    if not abs_no_nan_folder.exists():
+        os.makedirs(abs_no_nan_folder)
     if not html_report.exists():
         for i, comb in enumerate(data_combs):
             names = '+'.join([x.name for x in comb])
-            data_file = np.load(train_folder.joinpath('{}.npz'.format(names)))
-            data = pd.DataFrame(data_file['X'].ravel()[0].toarray())
-            data['Y'] = data_file['Y']
             filename = raw_folder.joinpath('{}.joblib'.format(names))
             if not filename.exists():
+                data_file = np.load(train_folder.joinpath('{}.npz'.format(names)))
+                data = pd.DataFrame(data_file['X'].ravel()[0].toarray())
+                data['Y'] = data_file['Y']
                 corrs = []
                 for col in data.columns:
                     if col != 'Y':
                         corrs.append(data[col].corr(data.Y))
-                del data
                 corrs = pd.DataFrame(corrs)
                 joblib.dump(corrs, filename)
             else:
@@ -273,6 +286,15 @@ def create_correlation_dist(data_combs, subplots):
             distplot = ff.create_distplot([corrsMod[c] for c in corrsMod.columns], [names], bin_size=.005)['data']
             subplots.append_trace(distplot[0], 1, i + 1)
             subplots.append_trace(distplot[1], 1, i + 1)
+            filename = abs_nan_folder.joinpath('{}.joblib'.format(names))
+            if not filename.exists():
+                corrsModAbs = corrsMod.abs()
+                joblib.dump(corrsModAbs, filename)
+            else:
+                corrsModAbs = joblib.load(filename)
+            distplot = ff.create_distplot([corrsModAbs[c] for c in corrsModAbs.columns], [names], bin_size=.005)['data']
+            subplots.append_trace(distplot[0], 3, i + 1)
+            subplots.append_trace(distplot[1], 3, i + 1)
             filename = no_nan_folder.joinpath('{}.joblib'.format(names))
             if not filename.exists():
                 corrs.dropna(inplace=True)
@@ -282,19 +304,111 @@ def create_correlation_dist(data_combs, subplots):
             distplot = ff.create_distplot([corrs[c] for c in corrs.columns], [names], bin_size=.005)['data']
             subplots.append_trace(distplot[0], 2, i + 1)
             subplots.append_trace(distplot[1], 2, i + 1)
+            filename = abs_no_nan_folder.joinpath('{}.joblib'.format(names))
+            if not filename.exists():
+                corrsAbs = corrs.abs()
+                joblib.dump(corrsAbs, filename)
+            else:
+                corrsAbs = joblib.load(filename)
+            distplot = ff.create_distplot([corrsAbs[c] for c in corrsAbs.columns], [names], bin_size=.005)['data']
+            subplots.append_trace(distplot[0], 4, i + 1)
+            subplots.append_trace(distplot[1], 4, i + 1)
+    print('Done.')
+
+def create_chi_dist(data_combs, subplots):
+    """Create the chi^2 distributions"""
+    print('Creating chi^2 distributions.')
+    data_folder = pathlib.Path('data').resolve()
+    train_folder = data_folder.joinpath('train')
+    filter_folder = data_folder.joinpath('filter')
+    chi_folder = filter_folder.joinpath('chi^2')
+    raw_folder = chi_folder.joinpath('raw')
+    nan_folder = chi_folder.joinpath('with_nan')
+    no_nan_folder = chi_folder.joinpath('with_no_nan')
+    html_report = pathlib.Path('reports').resolve().joinpath('graphs.html')
+    if not chi_folder.exists():
+        os.makedirs(chi_folder)
+    if not raw_folder.exists():
+        os.makedirs(raw_folder)
+    if not nan_folder.exists():
+        os.makedirs(nan_folder)
+    if not no_nan_folder.exists():
+        os.makedirs(no_nan_folder)
+    if not html_report.exists():
+        for i, comb in enumerate(data_combs):
+            names = '+'.join([x.name for x in comb])
+            filename = raw_folder.joinpath('{}.joblib'.format(names))
+            if not filename.exists():
+                data_file = np.load(train_folder.joinpath('{}.npz'.format(names)))
+                data = pd.DataFrame(data_file['X'].ravel()[0].toarray())
+                y = pd.DataFrame(data_file['Y'])
+                chi = pd.DataFrame(list(chi2(data, y))).T
+                joblib.dump(chi, filename)
+            else:
+                chi = joblib.load(filename)
+            filename = nan_folder.joinpath('{}.joblib'.format(names))
+            if not filename.exists():
+                chiMod = chi.fillna(0)
+                joblib.dump(chiMod, filename)
+            else:
+                chiMod = joblib.load(filename)
+            distplot = ff.create_distplot([chiMod[0]], [names])['data']
+            subplots.append_trace(distplot[0], 5, i + 1)
+            subplots.append_trace(distplot[1], 5, i + 1)
+            filename = no_nan_folder.joinpath('{}.joblib'.format(names))
+            if not filename.exists():
+                chi.dropna(inplace=True)
+                joblib.dump(chi, filename)
+            else:
+                chi = joblib.load(filename)
+            distplot = ff.create_distplot([chi[0]], [names])['data']
+            subplots.append_trace(distplot[0], 6, i + 1)
+            subplots.append_trace(distplot[1], 6, i + 1)
+            filename = no_nan_folder.joinpath('{}.joblib'.format(names))
+    print('Done.')
+
+def create_mutual_info_dist(data_combs, subplots):
+    """Create the mutual information distributions"""
+    print('Creating mutual information distributions.')
+    data_folder = pathlib.Path('data').resolve()
+    train_folder = data_folder.joinpath('train')
+    filter_folder = data_folder.joinpath('filter')
+    info_folder = filter_folder.joinpath('mutual_info')
+    raw_folder = info_folder.joinpath('raw')
+    html_report = pathlib.Path('reports').resolve().joinpath('graphs.html')
+    if not raw_folder.exists():
+        os.makedirs(raw_folder)
+    if not html_report.exists():
+        for i, comb in enumerate(data_combs):
+            names = '+'.join([x.name for x in comb])
+            filename = raw_folder.joinpath('{}.joblib'.format(names))
+            if not filename.exists():
+                data_file = np.load(train_folder.joinpath('{}.npz'.format(names)))
+                data = pd.DataFrame(data_file['X'].ravel()[0].toarray())
+                y = pd.DataFrame(data_file['Y'])
+                info = pd.DataFrame(mutual_info_classif(data, y.values.ravel(), random_state=1, discrete_features=True))
+                joblib.dump(info, filename)
+            else:
+                info = joblib.load(filename)
+            distplot = ff.create_distplot([info[c] for c in info.columns], [names])['data']
+            subplots.append_trace(distplot[0], 7, i + 1)
+            subplots.append_trace(distplot[1], 7, i + 1)
+    print('Done.')
 
 def save_subplots(subplots):
     """Save the subplots into a file"""
+    print('Generating reports.')
     report_folder = pathlib.Path('reports').resolve()
     report_html = report_folder.joinpath('graphs.html')
     report_pdf = report_folder.joinpath('graphs.pdf')
     if not report_folder.exists():
         os.makedirs(report_folder)
     if not report_html.exists():
-        subplots['layout'].update(width=8000)
+        subplots['layout'].update(width=8000, height=3000)
         offline.plot(subplots, filename=str(report_html))
     if not report_pdf.exists():
         pio.write_image(subplots, str(report_pdf))
+    print('Done.')
 
 # TODO: fix when we have a ton of models
 def train_tuned_models():
