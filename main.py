@@ -10,6 +10,7 @@ from sklearn.pipeline import FeatureUnion
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline
+from scipy.stats import pearsonr
 from plotly import tools
 import enum
 import numpy as np
@@ -200,12 +201,13 @@ def main():
     """Main definition of the program"""
     util = CFAUtils()
     data_combs = util.powerset(Vectorizers)
-    data_combs = list(data_combs[0:7]) + list(data_combs[18:19]) # Remove for all combinations
+    #data_combs = list(data_combs[0:7]) + list(data_combs[18:19]) # Remove for all combinations
     subplots = tools.make_subplots(rows=7, cols=len(data_combs), subplot_titles=get_plot_titles(data_combs))
     create_data(data_combs)
     create_correlation_dist(data_combs, subplots)
-    create_chi_dist(data_combs, subplots)
-    create_mutual_info_dist(data_combs, subplots)
+    #create_chi_dist(data_combs, subplots)
+    #create_mutual_info_dist(data_combs, subplots)
+    #create_filtered_data(data_combs)
     #trainModels(data_combs) # Only for use when tuning
     #train_tuned_models()
     save_subplots(subplots)
@@ -267,8 +269,12 @@ def create_correlation_dist(data_combs, subplots):
             filename = raw_folder.joinpath('{}.joblib'.format(names))
             if not filename.exists():
                 data_file = np.load(train_folder.joinpath('{}.npz'.format(names)))
-                data = pd.DataFrame(data_file['X'].ravel()[0].toarray())
-                data['Y'] = data_file['Y']
+                X = pd.DataFrame(data_file['X'].ravel()[0].toarray())
+                Y = pd.DataFrame(data_file['Y'])
+                print
+                #corrs = pearsonr(X, Y)
+                #print(corrs)
+                """
                 corrs = []
                 for col in data.columns:
                     if col != 'Y':
@@ -313,6 +319,7 @@ def create_correlation_dist(data_combs, subplots):
             distplot = ff.create_distplot([corrsAbs[c] for c in corrsAbs.columns], [names], bin_size=.005)['data']
             subplots.append_trace(distplot[0], 4, i + 1)
             subplots.append_trace(distplot[1], 4, i + 1)
+            """
     print('Done.')
 
 def create_chi_dist(data_combs, subplots):
@@ -374,14 +381,11 @@ def create_mutual_info_dist(data_combs, subplots):
     train_folder = data_folder.joinpath('train')
     filter_folder = data_folder.joinpath('filter')
     info_folder = filter_folder.joinpath('mutual_info')
-    raw_folder = info_folder.joinpath('raw')
     html_report = pathlib.Path('reports').resolve().joinpath('graphs.html')
-    if not raw_folder.exists():
-        os.makedirs(raw_folder)
     if not html_report.exists():
         for i, comb in enumerate(data_combs):
             names = '+'.join([x.name for x in comb])
-            filename = raw_folder.joinpath('{}.joblib'.format(names))
+            filename = info_folder.joinpath('{}.joblib'.format(names))
             if not filename.exists():
                 data_file = np.load(train_folder.joinpath('{}.npz'.format(names)))
                 data = pd.DataFrame(data_file['X'].ravel()[0].toarray())
@@ -393,6 +397,38 @@ def create_mutual_info_dist(data_combs, subplots):
             distplot = ff.create_distplot([info[c] for c in info.columns], [names])['data']
             subplots.append_trace(distplot[0], 7, i + 1)
             subplots.append_trace(distplot[1], 7, i + 1)
+    print('Done.')
+
+def create_filtered_data(data_combs):
+    """Create filtered data with selected features"""
+    print('Creating filtered data.')
+    data_folder = pathlib.Path('data').resolve()
+    filter_folder = data_folder.joinpath('filter')
+    chi_folder = filter_folder.joinpath('chi^2', 'with_nan')
+    corr_folder = filter_folder.joinpath('correlations', 'with_nan')
+    info_folder = filter_folder.joinpath('mutual_info')
+    train_folder = data_folder.joinpath('train')
+    new_train_folder = data_folder.joinpath('filtered_train')
+    if not new_train_folder.exists():
+        os.makedirs(new_train_folder)
+    for comb in data_combs:
+        names = '+'.join([x.name for x in comb])
+        filename = new_train_folder.joinpath('{}.joblib'.format(names))
+        if not filename.exists():
+            data_file = np.load(train_folder.joinpath('{}.npz'.format(names)))
+            data = pd.DataFrame(data_file['X'].ravel()[0].toarray())
+            data['Y'] = data_file['Y']
+            corr = joblib.load(corr_folder.joinpath('{}.joblib'.format(names)))
+            data['corr'] = corr
+            chi = joblib.load(chi_folder.joinpath('{}.joblib'.format(names)))
+            data['chi^2'] = chi[0]
+            info = joblib.load(info_folder.joinpath('{}.joblib'.format(names)))
+            data['info'] = info
+            data = data[data['corr'] != 0]
+            data = data[data['chi^2'] != 0]
+            data.sort_values('info', inplace=True, ascending=False)
+            data = data.iloc[0:int(data.shape[0]*.8)]
+            joblib.dump(data, new_train_folder.joinpath('{}.joblib'.format(names)))
     print('Done.')
 
 def save_subplots(subplots):
@@ -460,7 +496,7 @@ def trainModels(data_combs):
                 data = pd.DataFrame.from_dict(model.value.cv_results_)
                 if model == Models.M1:
                     data = data[['param_classification__C', 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
-                    data.to_csv(modelFile)
+                    #data.to_csv(modelFile)
                 #elif model == Models.M2 or model == Models.M5:
                 #    data = data[['param_classification__alpha', 'mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
                 #elif model == Models.M3:

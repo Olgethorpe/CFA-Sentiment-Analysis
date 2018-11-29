@@ -2,6 +2,7 @@
 data/test
 data/train
 data/filter
+data/filtered_train
 models/tuned
 reports/
 
