@@ -12,6 +12,7 @@ from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline
 from scipy.stats import pearsonr
 from plotly import tools
+import multiprocessing as mp
 import enum
 import numpy as np
 import pathlib
@@ -203,33 +204,37 @@ def main():
     data_combs = util.powerset(Vectorizers)
     #data_combs = list(data_combs[0:7]) + list(data_combs[18:19]) # Remove for all combinations
     subplots = tools.make_subplots(rows=7, cols=len(data_combs), subplot_titles=get_plot_titles(data_combs))
-    create_data(data_combs)
-    create_correlation_dist(data_combs, subplots)
+    #create_data(data_combs)
+    #create_correlation_dist(data_combs, subplots)
     #create_chi_dist(data_combs, subplots)
     #create_mutual_info_dist(data_combs, subplots)
     #create_filtered_data(data_combs)
     #trainModels(data_combs) # Only for use when tuning
     #train_tuned_models()
-    save_subplots(subplots)
+    #save_subplots(subplots)
 
 def get_plot_titles(data_combs):
     """Create the plot titles for subplots"""
-    titles = create_row_titles(data_combs, 'Pearson Correlation Distribution (NaN = 0)')
-    titles.extend(create_row_titles(data_combs, 'Pearson Correlation Distribution (Dropped NaN)'))
-    titles.extend(create_row_titles(data_combs, 'Pearson Absolute Value Correlation Distribution (NaN = 0)'))
-    titles.extend(create_row_titles(data_combs, 'Pearson Absolute Value Correlation Distribution (Dropped NaN)'))
-    titles.extend(create_row_titles(data_combs, 'Chi^2 Distribution (NaN = 0)'))
-    titles.extend(create_row_titles(data_combs, 'Chi^2 Distribution (Dropped NaN)'))
-    titles.extend(create_row_titles(data_combs, 'Mutual information Score'))
+    rowTitles = ['Pearson Correlation Distribution (NaN = 0)', 'Pearson Correlation Distribution (Dropped NaN)',
+        'Pearson Absolute Value Correlation Distribution (NaN = 0)', 'Pearson Absolute Value Correlation Distribution (Dropped NaN)'
+        'Chi^2 Distribution (NaN = 0)', 'Chi^2 Distribution (Dropped NaN)', 'Mutual information Score'
+    ]
+    titles = []
+    q = mp.Queue()
+    for title in rowTitles:
+        p = mp.Process(target=create_row_titles, args=(q, data_combs, title))
+        p.start()
+        titles.extend(q.get())
+        p.join()
     return titles
 
-def create_row_titles(data_combs, msg):
+def create_row_titles(q, data_combs, msg):
     """Create the plot titles for a row of subplots"""
     titles = []
     for comb in data_combs:
         names = '+'.join([x.name for x in comb])
         titles.append('{} {}'.format(names, msg))
-    return titles
+    q.put(titles)
 
 def create_data(data_combs):
     """Create the data combinations"""
