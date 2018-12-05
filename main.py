@@ -203,7 +203,8 @@ def main():
     util = CFAUtils()
     data_combs = util.powerset(Vectorizers)
     #data_combs = list(data_combs[0:7]) + list(data_combs[18:19]) # Remove for all combinations
-    subplots = tools.make_subplots(rows=7, cols=len(data_combs), subplot_titles=get_plot_titles(data_combs))
+    print(get_plot_titles(data_combs))
+    #subplots = tools.make_subplots(rows=7, cols=len(data_combs), subplot_titles=)
     #create_data(data_combs)
     #create_correlation_dist(data_combs, subplots)
     #create_chi_dist(data_combs, subplots)
