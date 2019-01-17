@@ -164,6 +164,7 @@ def main():
                 results = pd.DataFrame.from_dict(m.value.cv_results_)
                 results.to_csv(modelFile)
             """
+            Discuss about feature selection
             if not selected_features_model_file.exists():
                 corrs = []
                 chis = []
@@ -180,7 +181,6 @@ def main():
                 all_vals = pd.concat([corrs, chis], axis=1)
                 #all_vals.to_csv('test.csv')
                 print(all_vals)
-                    #name, id, college, and gra
             """
 
 if __name__ == '__main__':
