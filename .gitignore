@@ -1,10 +1,4 @@
-# Datasets
-data/test
-data/train
-data/filter
-data/filtered_train
-models/tuned
-reports/
+OLD/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
