@@ -1,5 +1,5 @@
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
-from sklearn.feature_selection import mutual_info_classif, chi2, roc_auc_score
+from sklearn.feature_selection import mutual_info_classif, chi2
 from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression, Perceptron
 from sklearn.naive_bayes import MultinomialNB
@@ -67,6 +67,7 @@ class Models(enum.Enum):
             'classification__alpha': alpha
         },
         cv=CV, return_train_score=True, n_jobs=-1, verbose=10, scoring=scorer, refit=False)
+    """
     M3 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
@@ -88,6 +89,7 @@ class Models(enum.Enum):
             'classification__degree': degree
         },
         cv=CV, return_train_score=True, n_jobs=-1, verbose=10, scoring=scorer, refit=False)
+    """
     M5 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
@@ -97,6 +99,7 @@ class Models(enum.Enum):
             'classification__alpha': alpha
         },
         cv=CV, return_train_score=True, n_jobs=-1, verbose=10, scoring=scorer, refit=False)
+    """
     M6 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
@@ -108,6 +111,7 @@ class Models(enum.Enum):
             'classification__hidden_layer_sizes': nn_estimators
         },
         cv=CV, return_train_score=True, n_jobs=-1, verbose=10, scoring=scorer, refit=False)
+    """
 
 class CFAUtils:
     """Utility functions to help with CFA analysis"""
