@@ -35,8 +35,13 @@ C = [pow(10, x) for x in range(-2, 1)]
 alpha = np.linspace(0, 1, 11)[1:]
 kernel = ('linear', 'poly', 'rbf')
 gamma = [pow(10, x) for x in range(-3, 0)]
+<<<<<<< HEAD
 nn_alpha = [pow(10, x) for x in range(-4, 1)]
 degree = [1, 2, 4]
+=======
+#nn_alpha = [pow(10, x) for x in range(-4, 1)]
+degree = [1,2,4]
+>>>>>>> 622cd34ea4bb043f40b5cb68cb54ddb5e11ee571
 n_estimators = [x*200 for x in range(1, 11)]
 nn_estimators = [(neuron,) * layer for layer in [x*100 for x in range(1, 11)] for neuron in [10, 50, 100, 150]]
 scorer = {
@@ -48,6 +53,7 @@ scorer = {
 
 class Models(enum.Enum):
     """'Stores the unfitted models'"""
+    """
     M1 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
@@ -74,7 +80,12 @@ class Models(enum.Enum):
         param_grid={
             'classification__n_estimators': n_estimators,
         },
+<<<<<<< HEAD
         cv=CV, return_train_score=True, verbose=10, scoring=scorer, refit=False, n_jobs=5)
+=======
+        cv=CV, return_train_score=True, verbose=10, n_jobs=-1, scoring=scorer, refit=False)
+    """
+>>>>>>> 622cd34ea4bb043f40b5cb68cb54ddb5e11ee571
     M4 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
@@ -96,7 +107,6 @@ class Models(enum.Enum):
             'classification__alpha': alpha
         },
         cv=CV, return_train_score=True, n_jobs=-1, verbose=10, scoring=scorer, refit=False)
-    """
     M6 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
@@ -125,7 +135,11 @@ def main():
     """Main definition of the program"""
     util = CFAUtils()
     data_combs = util.powerset(Vectorizers)
+<<<<<<< HEAD
     data_combs = list(data_combs[4:7]) + list(data_combs[18:19]) # Remove for all combinations
+=======
+    data_combs = list(data_combs[0:4]) #+ list(data_combs[18:19]) # Remove for all combinations
+>>>>>>> 622cd34ea4bb043f40b5cb68cb54ddb5e11ee571
     benchmark_folder = pathlib.Path('data/benchmark_data').resolve()
     features_selected_folder = pathlib.Path('data/feature_selected_data').resolve()
     os.makedirs(benchmark_folder, exist_ok=True)
@@ -174,7 +188,7 @@ def main():
                 all_vals = pd.concat([corrs, chis], axis=1)
                 #all_vals.to_csv('test.csv')
                 print(all_vals)
-            """
+    """
 
 if __name__ == '__main__':
     main()
