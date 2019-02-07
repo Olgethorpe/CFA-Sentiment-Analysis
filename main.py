@@ -35,7 +35,6 @@ C = [pow(10, x) for x in range(-2, 1)]
 alpha = np.linspace(0, 1, 11)[1:]
 kernel = ('linear', 'poly', 'rbf')
 gamma = [pow(10, x) for x in range(-3, 0)]
-<<<<<<< HEAD
 nn_alpha = [pow(10, x) for x in range(-4, 1)]
 degree = [1, 2, 4]
 #nn_alpha = [pow(10, x) for x in range(-4, 1)]
@@ -77,6 +76,7 @@ class Models(enum.Enum):
         param_grid={
             'classification__n_estimators': n_estimators,
         },
+        cv=CV, return_train_score=True, n_jobs=-1, verbose=10, scoring=scorer, refit=False)
     M4 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
@@ -115,9 +115,7 @@ def main():
     util = CFAUtils()
     data_combs = util.powerset(Vectorizers)
     benchmark_folder = pathlib.Path('data/benchmark_data').resolve()
-    features_selected_folder = pathlib.Path('data/feature_selected_data').resolve()
     os.makedirs(benchmark_folder, exist_ok=True)
-    os.makedirs(features_selected_folder, exist_ok=True)
     raw_data_file = pathlib.Path('data/raw/tweets.csv').resolve()
     raw_data = pd.read_csv(raw_data_file, index_col=0, names=['X', 'Y'], skiprows=1)
     X = raw_data['X']
@@ -132,36 +130,14 @@ def main():
         union = FeatureUnion([(v.name, v.value) for v in comb])
         X_fitted_data = union.fit_transform(X_train)
         gen_model_data_folder = benchmark_folder.joinpath(folder_name)
-        selected_features_model_data_folder = features_selected_folder.joinpath(folder_name)
         os.makedirs(gen_model_data_folder, exist_ok=True)
-        os.makedirs(selected_features_model_data_folder, exist_ok=True)
         for m in Models:
             model_file = '{}.csv'.format(m.name)
             gen_model_file = gen_model_data_folder.joinpath(model_file)
-            selected_features_model_file = selected_features_model_data_folder.joinpath(model_file)
             if not gen_model_file.exists():
                 m.value.fit(X_fitted_data, Y_train)
                 results = pd.DataFrame.from_dict(m.value.cv_results_)
                 results.to_csv(gen_model_file)
-            """
-            Discuss about feature selection
-            if not selected_features_model_file.exists():
-                corrs = []
-                chis = []
-                infos = []
-                for i in range(0, X_train.shape[0]):
-                    x_corr_data = pd.DataFrame(X_fitted_data.getcol(i).todense())
-                    corr = pearsonr(x_corr_data[0], Y_train)
-                    chi = chi2(x_corr_data[0].values.reshape(-1, 1), Y_train.values.reshape(-1, 1))
-                    corrs.append(corr)
-                    chis.append((chi[0][0], chi[1][0]))
-                corrs = pd.DataFrame(corrs, columns=['Pearson Coef', 'Pearson P-Val'])
-                corrs['Pearson Coef'] = corrs['Pearson Coef'].apply(abs)
-                chis = pd.DataFrame(chis, columns=['Chi^2', 'Chi P-Val'])
-                all_vals = pd.concat([corrs, chis], axis=1)
-                #all_vals.to_csv('test.csv')
-                print(all_vals)
-    """
 
 if __name__ == '__main__':
     main()
