@@ -1,18 +1,14 @@
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
-from sklearn.feature_selection import mutual_info_classif, chi2
 from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression, Perceptron
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import FeatureUnion
 from sklearn.model_selection import train_test_split
-from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import *
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline
-from scipy.stats import pearsonr
 import enum
 import numpy as np
 import pathlib
@@ -29,75 +25,111 @@ class Vectorizers(enum.Enum):
     V5 = CountVectorizer(ngram_range=(2, 2))
     V6 = CountVectorizer(ngram_range=(3, 3))
 
-# Parameters to pass to models
-CV = 5
-C = [pow(10, x) for x in range(-2, 1)]
-alpha = np.linspace(0, 1, 11)[1:]
-kernel = ('linear', 'poly', 'rbf')
-gamma = [pow(10, x) for x in range(-3, 0)]
-nn_alpha = [pow(10, x) for x in range(-4, 1)]
-degree = [1, 2, 4]
-#nn_alpha = [pow(10, x) for x in range(-4, 1)]
-degree = [1,2,4]
-n_estimators = [x*200 for x in range(1, 11)]
-nn_estimators = [(neuron,) * layer for layer in [x*100 for x in range(1, 11)] for neuron in [10, 50, 100, 150]]
-scorer = {
-    'F1': make_scorer(f1_score, average='macro'),
-    'Accuracy': make_scorer(accuracy_score),
-    'Precision': make_scorer(precision_score, average='macro'),
-    'Recall': make_scorer(recall_score, average='macro'),
-}
+class Parameters(enum.Enum):
+    """Parameters to pass to models"""
+    CV = 5
+    C1 = [pow(10, x) for x in range(-4, 4)]
+    C2 = [pow(10, x) for x in range(-2, 1)]
+    Alpha = np.linspace(0, 1, 11)[1:]
+    Kernel = ('linear', 'poly', 'rbf')
+    N_estimators = [x*200 for x in range(1, 11)]
+    Degree = [1,2,4]
+    Gamma = [pow(10, x) for x in range(-3, 0)]
+    Scorer = {
+        'F1': make_scorer(f1_score, average='macro'),
+        'Accuracy': make_scorer(accuracy_score),
+        'Precision': make_scorer(precision_score, average='macro'),
+        'Recall': make_scorer(recall_score, average='macro'),
+    }
 
 class CVModels(enum.Enum):
     """'Stores the unfitted models'"""
     M1 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
-            ('classification', LogisticRegression(multi_class='ovr', solver='liblinear', random_state=42))
+            ('classification', LogisticRegression(
+                multi_class='ovr',
+                solver='liblinear',
+                random_state=42)
+            )
         ]),
         param_grid={
-            'classification__C': C
+            'classification__C': Parameters.C1
         },
-        cv=CV, return_train_score=True, verbose=10, n_jobs=-1, scoring=scorer, refit=False)
+        cv=Parameters.CV,
+        return_train_score=True,
+        verbose=10,
+        n_jobs=-1,
+        scoring=Parameters.Scorer,
+        refit=False
+    )
     M2 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
             ('classification', MultinomialNB())
         ]),
         param_grid={
-            'classification__alpha': alpha
+            'classification__alpha': Parameters.Alpha
         },
-        cv=CV, return_train_score=True, n_jobs=-1, verbose=10, scoring=scorer, refit=False)
+        cv=Parameters.CV,
+        return_train_score=True,
+        n_jobs=-1,
+        verbose=10,
+        scoring=Parameters.Scorer,
+        refit=False
+    )
     M3 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
-            ('classification', RandomForestClassifier(max_depth=200, random_state=42, n_jobs=7))
+            ('classification', RandomForestClassifier(
+                max_depth=200,
+                random_state=42,
+                n_jobs=7)
+            )
         ]),
         param_grid={
-            'classification__n_estimators': n_estimators,
+            'classification__n_estimators': Parameters.N_estimators,
         },
-        cv=CV, return_train_score=True, n_jobs=-1, verbose=10, scoring=scorer, refit=False)
+        cv=Parameters.CV,
+        return_train_score=True,
+        n_jobs=-1,
+        verbose=10,
+        scoring=Parameters.Scorer,
+        refit=False
+    )
     M4 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
             ('classification', SVC(random_state=42))
         ]),
         param_grid={
-            'classification__C': C,
-            'classification__kernel': kernel,
-            'classification__gamma': gamma,
-            'classification__degree': degree
+            'classification__C': Parameters.C2,
+            'classification__kernel': Parameters.Kernel,
+            'classification__gamma': Parameters.Gamma,
+            'classification__degree': Parameters.Degree
         },
-        cv=CV, return_train_score=True, n_jobs=-1, verbose=10, scoring=scorer, refit=False)
+        cv=Parameters.CV,
+        return_train_score=True,
+        n_jobs=-1,
+        verbose=10,
+        scoring=Parameters.Scorer,
+        refit=False
+    )
     M5 = GridSearchCV(
         estimator=Pipeline([
             ('sampling', SMOTE()),
             ('classification', Perceptron(max_iter=1000, tol=1e-3))
         ]),
         param_grid={
-            'classification__alpha': alpha
+            'classification__alpha': Parameters.Alpha
         },
-        cv=CV, return_train_score=True, n_jobs=-1, verbose=10, scoring=scorer, refit=False)
+        cv=Parameters.CV,
+        return_train_score=True,
+        n_jobs=-1,
+        verbose=10,
+        scoring=Parameters.Scorer,
+        refit=False
+    )
 
 class CFAUtils:
     """Utility functions to help with CFA analysis"""
@@ -117,10 +149,20 @@ def main():
     benchmark_folder = pathlib.Path('data/benchmark_data').resolve()
     os.makedirs(benchmark_folder, exist_ok=True)
     raw_data_file = pathlib.Path('data/raw/tweets.csv').resolve()
-    raw_data = pd.read_csv(raw_data_file, index_col=0, names=['X', 'Y'], skiprows=1)
+    raw_data = pd.read_csv(
+        raw_data_file,
+        index_col=0,
+        names=['X', 'Y'],
+        skiprows=1
+    )
     X = raw_data['X']
     Y = raw_data['Y']
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=.2, random_state=42)
+    X_train, X_test, Y_train, Y_test = train_test_split(
+        X,
+        Y,
+        test_size=.2,
+        random_state=42
+    )
     for comb in data_combs:
         folder_name = ''
         for vectorizer in comb:
