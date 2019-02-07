@@ -48,7 +48,7 @@ scorer = {
     'Recall': make_scorer(recall_score, average='macro'),
 }
 
-class Models(enum.Enum):
+class CVModels(enum.Enum):
     """'Stores the unfitted models'"""
     M1 = GridSearchCV(
         estimator=Pipeline([
@@ -131,12 +131,12 @@ def main():
         X_fitted_data = union.fit_transform(X_train)
         gen_model_data_folder = benchmark_folder.joinpath(folder_name)
         os.makedirs(gen_model_data_folder, exist_ok=True)
-        for m in Models:
-            model_file = '{}.csv'.format(m.name)
+        for CV_m in CVModels:
+            model_file = '{}.csv'.format(CV_m.name)
             gen_model_file = gen_model_data_folder.joinpath(model_file)
             if not gen_model_file.exists():
-                m.value.fit(X_fitted_data, Y_train)
-                results = pd.DataFrame.from_dict(m.value.cv_results_)
+                CV_m.value.fit(X_fitted_data, Y_train)
+                results = pd.DataFrame.from_dict(CV_m.value.cv_results_)
                 results.to_csv(gen_model_file)
 
 if __name__ == '__main__':
