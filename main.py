@@ -25,7 +25,7 @@ class Vectorizers(enum.Enum):
     V5 = CountVectorizer(ngram_range=(2, 2))
     V6 = CountVectorizer(ngram_range=(3, 3))
 
-class Parameters(enum.Enum):
+class Parameters:
     """Parameters to pass to models"""
     CV = 5
     C1 = [pow(10, x) for x in range(-4, 4)]
